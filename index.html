@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b7a75">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>لیست قیمت مداربسته</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mu:#6b7480;--ac:#0b7a75;--bd:#e1e4e8;--dg:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171a;--card:#1d2226;--tx:#e8eaed;--mu:#9aa3ad;--ac:#3cc4bb;--bd:#2c3339;--dg:#ff7b6b}}
+:root[data-theme="dark"]{--bg:#14171a;--card:#1d2226;--tx:#e8eaed;--mu:#9aa3ad;--ac:#3cc4bb;--bd:#2c3339;--dg:#ff7b6b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Vazirmatn,Tahoma,sans-serif;max-width:640px;margin-inline:auto;padding:12px}
+h1{font-size:19px;margin:6px 0 10px}
+input,select,button{font:inherit;color:inherit}
+input,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--card)}
+.chips{display:flex;gap:6px;overflow-x:auto;margin:10px 0;padding-bottom:4px}
+.chip{white-space:nowrap;padding:7px 14px;border-radius:20px;border:1px solid var(--bd);background:var(--card);cursor:pointer}
+.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px}
+.top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.nm{font-weight:600}
+.sub{color:var(--mu);font-size:13px;margin-top:2px}
+.pr{font-weight:700;color:var(--ac);white-space:nowrap}
+.pr.no{color:var(--mu);font-weight:400;font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.b{padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:transparent;font-size:13px;cursor:pointer;text-decoration:none;color:var(--tx)}
+.b.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+.b.d{color:var(--dg)}
+.bar{display:flex;gap:8px;margin:12px 0}
+.bar button{flex:1;padding:12px;border-radius:10px;border:1px solid var(--ac);background:var(--ac);color:#fff;cursor:pointer;font-weight:600}
+.bar button.s{background:transparent;color:var(--ac)}
+dialog{border:1px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx);width:min(92vw,420px);padding:16px}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+label{display:block;font-size:13px;color:var(--mu);margin:10px 0 4px}
+.empty{text-align:center;color:var(--mu);padding:30px 0}
+</style>
+</head>
+<body>
+<h1>📹 لیست قیمت مداربسته</h1>
+<input id="q" type="search" placeholder="جستجو: برند، مدل، ظرفیت…">
+<div class="chips" id="chips"></div>
+<div class="bar"><button id="add">+ افزودن آیتم</button><button class="s" id="copy">کپی لیست</button></div>
+<div id="list"></div>
+
+<dialog id="dlg">
+  <div id="dt" style="font-weight:700"></div>
+  <label>دسته</label>
+  <select id="fc"><option>دوربین</option><option>DVR/NVR</option><option>هارد</option><option>سایر</option></select>
+  <label>برند</label><input id="fb">
+  <label>مدل / نام (مثلاً «۲ مگاپیکسل بولت» یا «۱ ترابایت»)</label><input id="fn">
+  <label>قیمت (تومان)</label><input id="fp" inputmode="numeric">
+  <div class="row" style="margin-top:16px">
+    <button class="b p" id="ok">ذخیره</button><button class="b" id="cancel">انصراف</button>
+  </div>
+</dialog>
+
+<script>
+var CATS=["همه","دوربین","DVR/NVR","هارد","سایر"];
+var KEY="cctv_items_v1",items=[],cat="همه",editId=null;
+function load(){try{var s=localStorage.getItem(KEY);if(s)items=JSON.parse(s)}catch(e){}
+ if(!items.length){items=[
+  {c:"هارد",b:"",n:"هارد ۱ ترابایت"},{c:"هارد",b:"",n:"هارد ۲ ترابایت"},{c:"هارد",b:"",n:"هارد ۴ ترابایت"},
+  {c:"DVR/NVR",b:"",n:"دستگاه ۴ کانال"},{c:"DVR/NVR",b:"",n:"دستگاه ۸ کانال"},
+  {c:"دوربین",b:"",n:"دوربین ۲ مگاپیکسل"}].map(function(x,i){x.id=Date.now()+i;return x})}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
+function fmt(p){return p?Number(p).toLocaleString("fa-IR")+" تومان":"قیمت ثبت نشده"}
+function toEn(s){return String(s).replace(/[۰-۹]/g,function(d){return "۰۱۲۳۴۵۶۷۸۹".indexOf(d)}).replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d)}).replace(/[^\d]/g,"")}
+function esc(s){return String(s||"").replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function render(){
+ var q=document.getElementById("q").value.trim().toLowerCase();
+ document.getElementById("chips").innerHTML=CATS.map(function(c){return '<button class="chip'+(c===cat?' on':'')+'" data-c="'+c+'">'+c+'</button>'}).join("");
+ var r=items.filter(function(x){return (cat==="همه"||x.c===cat)&&((x.b+" "+x.n).toLowerCase().indexOf(q)>-1)});
+ var h=r.map(function(x){
+  var t=encodeURIComponent((x.b+" "+x.n).trim());
+  return '<div class="card"><div class="top"><div><div class="nm">'+esc((x.b+" "+x.n).trim())+'</div><div class="sub">'+esc(x.c)+(x.d?" · "+esc(x.d):"")+'</div></div><div class="pr'+(x.p?'':' no')+'">'+fmt(x.p)+'</div></div>'+
+  '<div class="row"><a class="b" target="_blank" rel="noopener" href="https://torob.com/search/?query='+t+'">ترب</a>'+
+  '<a class="b" target="_blank" rel="noopener" href="https://www.digikala.com/search/?q='+t+'">دیجی‌کالا</a>'+
+  '<a class="b" target="_blank" rel="noopener" href="https://basalam.com/search?q='+t+'">باسلام</a>'+
+  '<button class="b p" data-e="'+x.id+'">ویرایش قیمت</button><button class="b d" data-x="'+x.id+'">حذف</button></div></div>'}).join("");
+ document.getElementById("list").innerHTML=h||'<div class="empty">آیتمی پیدا نشد</div>';
+}
+function openDlg(id){
+ editId=id;var x=items.filter(function(i){return i.id===id})[0]||{c:cat==="همه"?"دوربین":cat,b:"",n:"",p:""};
+ document.getElementById("dt").textContent=id?"ویرایش آیتم":"آیتم جدید";
+ document.getElementById("fc").value=x.c;document.getElementById("fb").value=x.b;
+ document.getElementById("fn").value=x.n;document.getElementById("fp").value=x.p||"";
+ document.getElementById("dlg").showModal();
+}
+document.getElementById("add").onclick=function(){openDlg(null)};
+document.getElementById("cancel").onclick=function(){document.getElementById("dlg").close()};
+document.getElementById("ok").onclick=function(){
+ var n=document.getElementById("fn").value.trim();if(!n)return;
+ var o={c:document.getElementById("fc").value,b:document.getElementById("fb").value.trim(),n:n,p:toEn(document.getElementById("fp").value)};
+ var d=new Date().toLocaleDateString("fa-IR");
+ if(editId){items=items.map(function(i){if(i.id!==editId)return i;if(o.p&&o.p!==i.p)o.d="به‌روز: "+d;else o.d=i.d;return Object.assign({},i,o)})}
+ else{if(o.p)o.d="به‌روز: "+d;o.id=Date.now();items.unshift(o)}
+ save();document.getElementById("dlg").close();render();
+};
+document.getElementById("q").oninput=render;
+document.getElementById("chips").onclick=function(e){var c=e.target.getAttribute("data-c");if(c){cat=c;render()}};
+document.getElementById("list").onclick=function(e){
+ var ed=e.target.getAttribute("data-e"),x=e.target.getAttribute("data-x");
+ if(ed)openDlg(Number(ed));
+ if(x&&confirm("حذف شود؟")){items=items.filter(function(i){return i.id!==Number(x)});save();render()}
+};
+document.getElementById("copy").onclick=function(){
+ var t=items.map(function(i){return (i.b+" "+i.n).trim()+" — "+fmt(i.p)}).join("\n");
+ var btn=this;
+ function done(){btn.textContent="کپی شد ✓";setTimeout(function(){btn.textContent="کپی لیست"},1500)}
+ try{navigator.clipboard.writeText(t).then(done,function(){prompt("کپی کن:",t)})}catch(e){prompt("کپی کن:",t)}
+};
+load();render();
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+</script>
+</body>
+</html>
